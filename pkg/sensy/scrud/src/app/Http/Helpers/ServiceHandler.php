@@ -4,8 +4,6 @@ namespace Sensy\Scrud\app\Http\Helpers;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Str;
 
 class ServiceHandler
 {

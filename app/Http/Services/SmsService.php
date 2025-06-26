@@ -50,14 +50,13 @@ class SmsService
                     'temperature_value' => $data['temp'],
                     'status' => $data['status'],
                     'received_from' => $from,
-                    'type' => in_array($data['status'],['low','high']) ? 'alert': 'normal'
+                    'type' => in_array($data['status'], ['low', 'high']) ? 'alert' : 'normal'
                 ];
 
                 // Store temperature reading
                 $request->data = $data;
-                $req = Model::call($request, 'TemperatureReading', 'store',isApi: true);
-                $req = json_decode($req->getContent(),true);
-
+                $req = Model::call($request, 'TemperatureReading', 'store', isApi: true);
+                $req = json_decode($req->getContent(), true);
 
 
                 if ($req['status'] == 0) return $req;
@@ -75,15 +74,26 @@ class SmsService
                             'alert_type' => $data['status'],
                             'triggered_at' => now(),
                             'status' => 'triggered',
-                            'resolved_at'=>null,
+                            'resolved_at' => null,
                             'created_by' => 1, // Assuming 1 - System
                         ];
 
                         $req = new Request();
                         $req->merge(['data' => $alert]);
 
-                        $req = Model::call($req, 'AlertLog', 'store',isApi: true);
-                        $req = json_decode($req->getContent(),true);
+                        $req = Model::call($req, 'AlertLog', 'store', isApi: true);
+                        $req = json_decode($req->getContent(), true);
+
+                        #send sms
+                        if ($req['status'] == 1) {
+                            $message = "Alert: {$sensor->name}(Room: {$sensor->room->name}) has a {$data['status']} temperature of {$data['temperature_value']}°C.";
+                            Log::info("Sending alert SMS to {$sensor->phone_number}: {$message}");
+
+
+                            $message = $this->sendMessage($request->merge(['to'=>'--','message'=>$message]), true);
+                            Log::info("Alert SMS response: " . json_encode($message));
+                        }
+
                         return $req;
                     }
 
@@ -134,9 +144,11 @@ class SmsService
         return null;
     }
 
-    public function sendMessage($request)
+    public function sendMessage($request, $alt = false)
     {
         $req = request();
+
+        Log::debug('REQUEST:::',$request->all());
 
         $to = $req->to;
         $message = $req->message;
@@ -151,15 +163,37 @@ class SmsService
         }
 
         try {
-            if(!config('services.twilio.active')) {
-                return [
-                    'status' => 0,
-                    'message' => 'SMS configurations disabled',
-                    'data' => null
-                ];
+            if (!$alt) {
+                if (!config('services.twilio.active')) {
+                    return [
+                        'status' => 0,
+                        'message' => 'SMS configwiurations disabled',
+                        'data' => null
+                    ];
+                }
+                $twilio = new Client(config('services.twilio.account_sid'), config('services.twilio.auth_token'));
+                $req = $twilio->messages->create($to, ['from' => config('services.twilio.from'), 'body' => $message]);
+            } else {
+                if (!env('ALT_TWILIO_ACTIVE')) {
+                    return [
+                        'status' => 0,
+                        'message' => 'Alt SMS configwiurations disabled',
+                        'data' => null
+                    ];
+                }
+
+                Log::info("Using alt Twilio configurations");
+                if (empty(env('ALT_TWILIO_ACCOUNT_SID')) || empty(env('ALT_TWILIO_AUTH_TOKEN')) || empty(env('ALT_SENSOR_PHONE_NO'))) {
+                    return [
+                        'status' => 0,
+                        'message' => 'Alt Twilio configurations are not set properly',
+                        'data' => null
+                    ];
+                }
+
+                $twilio = new Client(env('ALT_TWILIO_ACCOUNT_SID'), env('ALT_TWILIO_AUTH_TOKEN'));
+                $req = $twilio->messages->create(env('ALT_SENSOR_PHONE_NO'), ['from' => env('ALT_TWILIO_FROM'), 'body' => $message]);
             }
-            $twilio = new Client(config('services.twilio.account_sid'), config('services.twilio.auth_token'));
-            $req = $twilio->messages->create($to, ['from' => config('services.twilio.from'), 'body' => $message]);
 
             if ($req) {
                 Log::info("SMS sent to {$to}: {$message}");
