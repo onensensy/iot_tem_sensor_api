@@ -1,0 +1,15 @@
+meta {
+  name: temp-up
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{base_url_plain}}/temp-overide/:temp
+  body: none
+  auth: inherit
+}
+
+params:path {
+  temp: normal
+}

@@ -29,11 +29,22 @@ class ConfigSeeder extends Seeder
                 'description' => 'M Temperature',
                 'k_value' => '28'
             ],
-                [
-                    'name' => 'm_temp_variation',
-                    'description' => 'M Temperature Variation',
-                    'k_value' => '1'
-                ],
+            #mocked temp
+            [
+                'name' => 'd_temp',
+                'description' => 'Default Temperature',
+                'k_value' => '28'
+            ],
+            [
+                'name' => 'dmy_temp',
+                'description' => 'Temporary Dummy Temperature',
+                'k_value' => '28'
+            ],
+            [
+                'name' => 'm_temp_variation',
+                'description' => 'M Temperature Variation',
+                'k_value' => '1'
+            ],
         ];
 
         foreach ($configs as $config) {

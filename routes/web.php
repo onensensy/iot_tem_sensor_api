@@ -51,5 +51,49 @@ Route::get('sendSms', function () {
 
     return Model::call(request(), 'Sms', 'sendMessage');
 });
+
+##FOR TESTING ONLY
+Route::get('temp-overide/{temp}', function ($temp) {
+
+    if (is_string($temp) && $temp == 'normal') {
+        $c_config = l_config('m_temp');
+        $c_config->k_value = l_config('d_temp')->k_value;
+
+        $c_config->save();
+
+        $dmy_config = l_config('dmy_temp');
+        $dmy_config->k_value = 0;
+        $dmy_config->save();
+
+        return dd('TEMPERATURE HAS BEEN NORMALIZED');
+    } else {
+        if (!is_numeric($temp)) return dd('INVALID TEMPERATURE');
+
+        #1. Backup default temp.
+        $c_config = l_config('m_temp');
+
+        ##is dmy
+        $dmy_config = l_config('dmy_temp');
+        if (!$dmy_config->k_value) {
+            $d_config = l_config('d_temp');
+
+            $d_config->k_value = $c_config->k_value;
+            $d_config->save();
+
+            $dmy_config->k_value = true;
+            $dmy_config->save();
+
+        }
+
+        #2. Update current temp.
+
+        $c_config->k_value = (float)$temp;
+        $c_config->save();
+
+        #3. return
+        return dd("TEMP UPDATED TO: $temp");
+    }
+
+});
 ##FOR TESTING ONLY
 require __DIR__ . '/auth.php';
